@@ -1,0 +1,934 @@
+@using Syncfusion.Blazor.Diagram
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.Popups
+
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject ThemeService ThemeService
+
+@inherits SampleBaseComponent
+@namespace MermaidLiveEditor
+<style>
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        font-family: "inter";
+    }
+
+    .app-layout {
+        display: grid;
+        grid-template-rows: auto 1fr auto auto;
+        height: 100vh;
+        width: 100vw;
+    }
+
+    .main-grid {
+        display: flex;
+        height: 100%;
+        overflow: hidden;
+    }
+    /* ─────────────────────────────────────────────────────────────────────────────
+       Left Panel (Editor)
+    ───────────────────────────────────────────────────────────────────────────── */
+    .left-panel {
+        width: 400px;
+        min-width: 120px;
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background-color: #f4f4f4;
+    }
+
+    .dark-theme .left-panel {
+        background-color: #1e1e1e;
+    }
+
+    /* Editor toolbar strip */
+    .editor-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background-color: #ececec;
+        border-bottom: 1px solid #d0d0d0;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+        min-height: 36px;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    .dark-theme .editor-toolbar {
+        background-color: #2c2c2c;
+        border-bottom: 1px solid #444;
+    }
+
+    .live-preview-label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        color: #333;
+        user-select: none;
+        padding: 2px 4px;
+    }
+
+    .dark-theme .live-preview-label {
+        color: #e0e0e0;
+    }
+
+    .live-preview-label input[type="checkbox"] {
+        cursor: pointer;
+        accent-color: #1565c0;
+    }
+
+    .editor-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        font-size: 0.8rem;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        background-color: #fff;
+        cursor: pointer;
+        color: #333;
+        transition: background 0.15s;
+        white-space: nowrap;
+    }
+
+        .editor-btn:hover:not(:disabled) {
+            background-color: #e0e7ff;
+            border-color: #6c8ebf;
+        }
+
+        .editor-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+    .dark-theme .editor-btn {
+        background-color: #3a3a3a;
+        border-color: #555;
+        color: #e0e0e0;
+    }
+
+        .dark-theme .editor-btn:hover:not(:disabled) {
+            background-color: #444;
+        }
+
+    /* Monaco editor wrapper — takes remaining height */
+    .monaco-editor-container {
+        flex: 1 1 0;
+        min-height: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    /* SVG fallback preview pane — below the editor, hidden when empty */
+    .svg-preview-pane {
+        flex-shrink: 0;
+        max-height: 200px;
+        overflow: auto;
+        padding: 4px;
+        background-color: #fff;
+        border-top: 1px solid #ddd;
+        font-size: 0.8rem;
+    }
+
+        .svg-preview-pane:empty {
+            display: none;
+        }
+
+    .dark-theme .svg-preview-pane {
+        background-color: #252525;
+        border-top-color: #444;
+        color: #ccc;
+    }
+
+    .fallback-label {
+        font-size: 0.72rem;
+        color: #888;
+        margin-bottom: 4px;
+    }
+
+    .decorationsOverviewRuler {
+        position: relative !important;
+    }
+
+
+    .e-btn-icon.e-icons.e-copy {
+        font-size: 14px;
+    }
+
+    .action-btn {
+        min-width: 30px;
+        min-height: 30px;
+        padding: 0px !important;
+    }
+
+    /* ─────────────────────────────────────────────────────────────────────────────
+       Resizer / Splitter
+    ───────────────────────────────────────────────────────────────────────────── */
+    .splitter {
+        width: 6px;
+        background-color: transparent;
+        cursor: col-resize;
+        height: 100%;
+        z-index: 1;
+        flex-shrink: 0;
+        transition: background-color 0.15s;
+    }
+
+        .splitter:hover,
+        .splitter.dragging {
+            background-color: #6c8ebf44;
+        }
+
+    .dark-theme .splitter {
+        background-color: #333;
+    }
+
+        .dark-theme .splitter:hover {
+            background-color: #555;
+        }
+
+    /* ─────────────────────────────────────────────────────────────────────────────
+       Right Panel (Diagram)
+    ───────────────────────────────────────────────────────────────────────────── */
+    .right-panel {
+        position: relative;
+        flex-grow: 1;
+        height: 100%;
+        min-width: 50%;
+        overflow: hidden;
+        background-color: #f8f9fa;
+    }
+
+    .dark-theme .right-panel {
+        background-color: #1a1a2e;
+    }
+
+    ::-webkit-scrollbar {
+        width: 0;
+        height: 0;
+    }
+
+    .scroll-hide {
+        overflow: scroll;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+        .scroll-hide::-webkit-scrollbar {
+            display: none;
+        }
+    /* ─────────────────────────────────────────────────────────────────────────────
+       Navbar
+    ───────────────────────────────────────────────────────────────────────────── */
+    .navbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 46px;
+        padding: 0 16px;
+        background-color: rgb(236, 236, 236);
+        border-bottom: 1px solid #e0e0e0;
+        flex-shrink: 0;
+    }
+    
+    .navbar-left {
+        display: flex;
+        align-items: center;
+    }
+
+    .nav-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        margin-right: 24px;
+        color: #333333;
+        white-space: nowrap;
+    }
+
+    .navbar button {
+        margin-right: 8px;
+        background-color: transparent;
+        min-width: 60px;
+        font-size: 0.875rem;
+        border: 0;
+        box-shadow: none !important;
+    }
+
+    .nav-logo {
+        width: 2rem;
+        margin-right: 0.25rem;
+    }
+
+    .navbar-right > span {
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .dark-theme .navbar .nav-title,
+    .dark-theme .navbar button {
+        color: #f0f0f0;
+    }
+
+        .dark-theme .navbar button:hover {
+            background-color: #3a3a3a !important;
+        }
+
+    .dark-theme .navbar {
+        background-color: #2c2c2c;
+        border-bottom-color: #444444;
+    }
+
+    .dark-theme .nav-logo {
+        filter: brightness(0) invert(1);
+    }
+
+    .promotion-text {
+        display: flex;
+        align-items: center;
+        font-size: 14px;
+        font-weight: 500;
+        margin-right: 1rem;
+        font-family: sans-serif;
+    }
+
+    .e-btn:focus {
+        background: none;
+    }
+
+    .e-item {
+        height: 32px !important;
+    }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Bottom Status Bar
+───────────────────────────────────────────────────────────────────────────── */
+.bottom-bar {
+    height: 26px;
+    background-color: rgb(236, 236, 236);
+    border-top: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    font-size: 0.74rem;
+    flex-shrink: 0;
+}
+
+.bottom-bar-content {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    color: #333;
+    gap: 12px;
+    overflow: hidden;
+}
+
+.dark-theme .bottom-bar {
+    background-color: #212121;
+    border-top: 1px solid #4d4d4d;
+}
+
+.dark-theme .bottom-bar-content {
+    color: #eee;
+}
+
+/* Status valid/invalid */
+.status-message {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.status-valid {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    color: #2e7d32;
+}
+
+.dark-theme .status-valid {
+    color: #81c784;
+}
+
+.status-invalid {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    color: #c62828;
+}
+
+.dark-theme .status-invalid {
+    color: #ef9a9a;
+}
+
+.status-message .e-icons {
+    font-size: 0.85rem;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Center section */
+.status-center {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1 1 0;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.status-center span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-error-summary {
+    color: #c62828;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dark-theme .status-error-summary {
+    color: #ef9a9a;
+}
+
+/* Details button */
+.details-btn {
+    flex-shrink: 0;
+    padding: 1px 6px;
+    font-size: 0.72rem;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+    color: inherit;
+    white-space: nowrap;
+}
+
+.details-btn:hover {
+    background-color: #e0e7ff;
+    border-color: #6c8ebf;
+}
+
+.dark-theme .details-btn:hover {
+    background-color: #333;
+    border-color: #666;
+}
+
+/* Right: node count */
+.bottom-right {
+    margin-left: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Error Details Modal (inline, not DialogComponent)
+───────────────────────────────────────────────────────────────────────────── */
+.details-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.details-modal {
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
+    min-width: 320px;
+    max-width: 640px;
+    width: 90vw;
+    max-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dark-theme .details-modal {
+    background: #2a2a2a;
+    color: #e0e0e0;
+}
+
+.details-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border-bottom: 1px solid #ddd;
+    background: #f4f4f4;
+}
+
+.dark-theme .details-modal-header {
+    background: #333;
+    border-bottom-color: #555;
+}
+
+.details-modal-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: inherit;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+.details-modal-close:hover {
+    background: #e0e0e0;
+}
+
+.dark-theme .details-modal-close:hover {
+    background: #444;
+}
+
+.details-modal-body {
+    flex: 1;
+    overflow: auto;
+    padding: 12px 14px;
+    margin: 0;
+    font-size: 0.82rem;
+    font-family: Consolas, monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    color: #c62828;
+}
+
+.dark-theme .details-modal-body {
+    color: #ef9a9a;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Copy Toast Notification
+───────────────────────────────────────────────────────────────────────────── */
+.copy-toast {
+    position: fixed;
+    bottom: 42px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #323232;
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    z-index: 9999;
+    pointer-events: none;
+    animation: toast-fade 1.8s ease forwards;
+}
+
+@@keyframes toast-fade {
+    0%   { opacity: 0; transform: translateX(-50%) translateY(4px); }
+    15%  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    80%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Ruler overlay (thin bar at top of diagram panel)
+───────────────────────────────────────────────────────────────────────────── */
+.ruler-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 22px;
+    background: linear-gradient(to bottom, #f0f0f0, #e0e0e0);
+    border-bottom: 1px solid #ccc;
+    pointer-events: none;
+    z-index: 50;
+}
+
+.dark-theme .ruler-overlay {
+    background: linear-gradient(to bottom, #2c2c2c, #222);
+    border-bottom-color: #555;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Footer
+───────────────────────────────────────────────────────────────────────────── */
+.footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(90.4deg, #154db9 0.03%, #081b3f 11.56%, #081b3f 85.56%, #154db9 99.97%);
+  border: 1px solid #D8DEE9;
+  z-index: 100;
+  height: 72px;
+  font-family: sans-serif;;
+}
+.footer-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+.diagram-icon {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+}
+.footer-content {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+.footer-content .title span {
+  font-weight: 400;
+  font-size: 16px;
+  color: #e1e3e7;
+}
+.footer-content .title span .main-title {
+  font-weight: 700;
+  font-size: 16px;
+  color: #ffffff;
+}
+.footer-content .buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.footer-content .e-trial-btn::before {
+  font-family: sans-serif;
+}
+.footer-content .e-trial-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #FFF30F;
+  color: #0F172A;
+  border: transparent;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  height: 40px;
+  box-shadow: none;
+  text-decoration : none;
+}
+.footer-content .e-demo-btn {
+  display: flex;
+  align-items: center;
+  background-color: transparent;
+  border: transparent;
+  color: white;
+  border-radius: 6px;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: .7px;
+  height: 40px;
+  box-shadow: none;
+  text-decoration : none;
+  text-transform: none;
+}
+.footer-content .e-demo-btn:hover {
+  background-color: #173D87;
+}
+.footer-content .e-trial-btn::after {
+  content: "\e7f9";
+  font-family: 'e-icons';
+}
+.footer-content .e-primary:hover {
+  background: #F1E50B;
+  color: #0F172A;
+}
+.footer-content .e-primary:focus {
+  background: #F1E50B;
+  color: #0F172A;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Responsive
+───────────────────────────────────────────────────────────────────────────── */
+@@media screen and (max-width: 1140px) {
+    .footer-content .title {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .footer-content .title span,
+    .footer-content .title span .main-title {
+        font-size: 14px;
+    }
+}
+
+@@media screen and (max-width: 900px) {
+    .footer-content .title span:last-child {
+        display: none;
+    }
+}
+
+@@media screen and (max-width: 730px) {
+    .footer-content .buttons .e-demo-btn {
+        display: none;
+    }
+
+    .footer-content .buttons .e-trial-btn::before {
+        content: 'Free Trial';
+    }
+
+    .footer-content .buttons .e-trial-btn::after {
+        content: none;
+    }
+}
+
+@@media screen and (max-width: 620px) {
+    .left-panel {
+        display: none;
+    }
+
+    .splitter {
+        display: none;
+    }
+}
+
+.copy-toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #323232;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  z-index: 10000;
+}
+
+</style>
+
+<div class="app-layout @(ThemeService.CurrentTheme == "dark" ? "dark-theme" : "")">
+
+    <!-- Top Navbar -->
+    <div class="navbar">
+        
+        <DiagramNavMenu
+    OnFileAction="HandleNavBarActionAsync"
+    OnSampleLoad="HandleSampleLoadAsync"
+    OnViewOptionToggle="HandleNavBarActionAsync"
+    OnThemeChange="HandleThemeChangeAsync"
+    ShowGrid="@showGrid"
+    ShowRuler="@showRuler"
+     CurrentSample="@CurrentSample"
+    CurrentLayout="@detectedType"></DiagramNavMenu>
+
+    </div>
+
+    <!-- Main Area -->
+    <div class="main-grid">
+
+        <!-- Left Panel -->
+        <div class="left-panel" style="width:@editorPanelWidthPx">
+
+            <!-- Toolbar -->
+            <div class="editor-toolbar" role="toolbar" aria-label="Editor controls">
+
+                <SfCheckBox Label="Live Preview"
+                            Checked="@livePreview" @onchange="onChange">
+                </SfCheckBox>
+
+                <div style="display:flex; gap:4px;">
+                    @if (!livePreview)
+                    {
+                        <SfButton Id="renderBtn"
+                                  CssClass="action-btn e-flat"
+                                  IconCss="e-icons e-play"
+                                  Disabled="@isLoading"
+                                  AriaLabel="Render diagram" 
+                                  onclick="HandleRenderClickAsync"/>
+                    }
+
+                    <SfButton Id="clearBtn"
+                              CssClass="action-btn e-flat"
+                              IconCss="e-icons e-close"
+                              Disabled="false"
+                              AriaLabel="Clear editor" 
+                                  onclick="HandleClearClickAsync"/>
+
+                    <SfButton Id="copyBtn"
+                              CssClass="action-btn e-flat"
+                              IconCss="e-icons e-copy"
+                              Disabled="false"
+                              AriaLabel="Copy text" 
+                                  onclick="HandleCopyClickAsync"/>
+                </div>
+            </div>
+            
+            @if (showCopyToast)
+            {
+                <div class="copy-toast">
+                    Copied to clipboard
+                </div>
+            }
+
+            <!-- Monaco Editor -->
+            <div class="monaco-editor-container">
+                <StandaloneCodeEditor @ref="monacoEditor"
+                                      CssClass="json-editor"
+                                      ConstructionOptions="EditorOptions" 
+                                      OnDidChangeModelContent="OnEditorContentChange" />
+            </div>
+        </div>
+
+        <!-- Splitter -->
+        <div class="splitter" @onmousedown="OnSplitterMouseDown"></div>
+
+        <!-- Right Panel -->
+        <div class="right-panel scroll-hide ">
+            
+            <DiagramHamburgerMenu IsMindmapLayout="@isMindmapLayout"
+                                  OnExpandGraphOnly="ToggleExpandGraphOnly" />
+           
+            <SfDiagramComponent @ref="diagram"
+                                ID="mermaid-diagram"
+                                Width="100%"
+                                Height="100%"
+                                Created="OnDiagramCreated"
+                                NodeCreating="OnNodeCreating"
+                                ConnectorCreating="OnConnectorCreating"
+                                InteractionController="DiagramInteractions.ZoomPan | DiagramInteractions.SingleSelect">
+                <RulerSettings>
+                    <HorizontalRuler IsVisible="@showRuler" >
+                      </HorizontalRuler>
+                    <VerticalRuler IsVisible="@showRuler" >
+                      </VerticalRuler>
+                </RulerSettings>
+                <ScrollSettings ScrollLimit="ScrollLimitMode.Infinity" />
+
+                <SnapSettings Constraints="@(showGrid ? SnapConstraints.ShowLines : SnapConstraints.None)">
+                    <HorizontalGridLines LineColor="@ThemeService.CurrentThemeSettings.GridlinesColor" />
+                    <VerticalGridLines LineColor="@ThemeService.CurrentThemeSettings.GridlinesColor" />
+                </SnapSettings>
+
+            </SfDiagramComponent>
+
+
+            @if (!isEditorContentValid)
+            {
+                <div style="
+                    position:absolute;
+                    inset:0;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    background:rgba(0,0,0,0.6);
+                    color:#fff;
+                    z-index:9999;
+                    pointer-events:auto;">
+                </div>
+            }
+
+            <DiagramToolBar OnToolClick="HandleToolBarAction" />
+        </div>
+    </div>
+
+    <!-- Bottom Status Bar -->
+    <div class="bottom-bar">
+        <div class="bottom-bar-content">
+
+            <span class="status-message" aria-live="polite">
+                @if (!string.IsNullOrWhiteSpace(mermaidText))
+                {
+                    if (isEditorContentValid)
+                    {
+                        <span class="status-valid">
+                            <SfIcon IconCss="e-icons e-check" AriaHidden="true" />
+                            <span>Valid Mermaid</span>
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="status-invalid" role="alert">
+                            <SfIcon IconCss="e-icons e-close" AriaHidden="true" />
+                            <span>Invalid Mermaid</span>
+                        </span>
+                    }
+                }
+            </span>
+
+            <span class="status-center">
+                @if (!string.IsNullOrEmpty(importSummary))
+                {
+                    <span>@importSummary</span>
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <button class="details-btn"
+                                aria-label="View error details" @onclick="OpenErrorDetails">
+                            Details
+                        </button>
+                    }
+                }
+                else if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <span class="status-error-summary">
+                        @(errorMessage.Length > 80
+                            ? errorMessage.Substring(0, 80) + "…"
+                            : errorMessage)
+                    </span>
+                    <button class="details-btn"
+                            aria-label="View error details" @onclick="OpenErrorDetails">
+                        Details
+                    </button>
+                }
+            </span>
+
+            <span class="bottom-right">
+                Nodes: @totalNodeCount
+            </span>
+
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <div class="footer-container">
+            <div class="diagram-icon">
+                <img class="footer-logo" src="diagram_component.svg" />
+            </div>
+            <div class="footer-content">
+                <div class="title">
+                    <span>Want interactive diagramming in your app?</span>
+                    <span><strong class="main-title">Try our Diagram Component</strong> — build, connect, and customize!</span>
+                </div>
+                <div class="buttons">
+                    <a class="e-trial-btn"
+                           href="https://www.syncfusion.com/downloads/blazor"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                        Start Free Trial
+                    </a>
+                    <a class="e-demo-btn"
+                           href="https://www.syncfusion.com/request-demo"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                        Request Demo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<DiagramExportDialog IsVisible="@isExportDialogOpen"
+                     OnClose="@(() => isExportDialogOpen = false)"
+                     OnExport="HandleDiagramExportAsync" />

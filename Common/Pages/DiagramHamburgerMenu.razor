@@ -1,0 +1,77 @@
+@using Syncfusion.Blazor.SplitButtons
+@inject ThemeService ThemeService
+
+@namespace MermaidLiveEditor
+
+<style>
+    /* ─────────────────────────────────────────────────────────────────────────────
+       Hamburger Menu
+    ───────────────────────────────────────────────────────────────────────────── */
+    .hamburger-menu > button {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 100;
+        background: #343a401a !important;
+        border: none;
+        cursor: pointer;
+        padding: 0 7px !important;
+        width: 30px;
+        height: 30px;
+    }
+
+    .hamburger-menu .e-icons.e-menu {
+        font-size: 16px;
+    }
+
+    .dark-theme .right-panel .hamburger-menu > button {
+        background-color: #3a3a3a !important;
+    }
+
+</style>
+
+<div class="hamburger-menu">
+    <SfDropDownButton CssClass="e-caret-hide hamburger-btn"
+                      IconCss="e-icons e-menu">
+        <DropDownMenuItems>
+            <DropDownMenuItem Text="Expand Graph Only"
+                              Id="expandGraph"
+                              IconCss="e-icons e-expand"
+                              Disabled="@(!IsMindmapLayout)" />
+        </DropDownMenuItems>
+        <DropDownButtonEvents ItemSelected="OnMenuItemSelected" />
+    </SfDropDownButton>
+</div>
+
+@code {
+    [Parameter] public bool IsMindmapLayout { get; set; }
+    [Parameter] public Action? OnExpandGraphOnly { get; set; }
+
+    private void OnMenuItemSelected(MenuEventArgs args)
+    {
+        if (args?.Item?.Id == "expandGraph" && IsMindmapLayout)
+        {
+            OnExpandGraphOnly?.Invoke();
+        }
+    }
+}
+
+<style>
+    .hamburger-btn {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        border-radius: 3px;
+        z-index: 100;
+    }
+
+        .hamburger-btn.e-dropdown-btn.light {
+            background: #343A401A;
+        }
+
+        .hamburger-btn.e-dropdown-btn.dark {
+            background: #3A3A3A;
+        }
+
+    ``
+</style>

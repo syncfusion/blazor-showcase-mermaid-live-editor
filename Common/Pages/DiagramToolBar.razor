@@ -1,0 +1,112 @@
+﻿@using Syncfusion.Blazor.Navigations
+@inject ThemeService ThemeService
+
+@namespace MermaidLiveEditor
+<style>
+    /* ─────────────────────────────────────────────────────────────────────────────
+       Diagram Zoom Toolbar
+    ───────────────────────────────────────────────────────────────────────────── */
+    .toolbar-container {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        z-index: 100;
+    }
+
+    .toolbar-wrapper {
+        border: 0;
+    }
+
+    body:not(.dark-theme) .e-toolbar .e-toolbar-item .e-tbar-btn {
+        background: #343a401a !important;
+        border-radius: 3px;
+    }
+
+    .toolbar-container .e-toolbar .e-toolbar-items {
+        background: transparent !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    .e-toolbar,
+    .e-toolbar .e-toolbar-items {
+        background: transparent !important;
+    }
+
+    .e-btn-icon {
+        font-size: 16px !important;
+    }
+
+</style>
+
+<div class="toolbar-container @(ThemeService.CurrentTheme)"
+     aria-label="Diagram zoom controls">
+
+    <SfToolbar CssClass="toolbar-buttons">
+        <ToolbarItems>
+            <ToolbarItem PrefixIcon="e-icons e-reset"
+                         TooltipText="Reset Zoom"
+                         CssClass="e-flat toolbar-btn"
+                         OnClick="@(() => RaiseClick("reset"))" />
+
+            <ToolbarItem PrefixIcon="e-icons e-zoom-to-fit"
+                         TooltipText="Fit To Page"
+                         CssClass="e-flat toolbar-btn"
+                         OnClick="@(() => RaiseClick("fitToPage"))" />
+
+            <ToolbarItem PrefixIcon="e-icons e-zoom-in"
+                         TooltipText="Zoom In"
+                         CssClass="e-flat toolbar-btn"
+                         OnClick="@(() => RaiseClick("zoomIn"))" />
+
+            <ToolbarItem PrefixIcon="e-icons e-zoom-out"
+                         TooltipText="Zoom Out"
+                         CssClass="e-flat toolbar-btn"
+                         OnClick="@(() => RaiseClick("zoomOut"))" />
+        </ToolbarItems>
+    </SfToolbar>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<string> OnToolClick { get; set; }
+
+    private async Task RaiseClick(string action)
+    {
+        if (OnToolClick.HasDelegate)
+        {
+            await OnToolClick.InvokeAsync(action);
+        }
+    }
+}
+
+
+<style>
+    .toolbar-container {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    display: flex;
+    align-items: center;
+    border-radius: 3px;
+}
+
+.toolbar-container .e-toolbar {
+    border: 0;
+    background: none;
+}
+
+.toolbar-container.light .e-toolbar .e-toolbar-item .e-tbar-btn {
+    background: #343A401A !important;
+}
+
+.toolbar-container .e-toolbar .e-toolbar-items {
+    margin: 0;
+    padding: 0;
+    background: transparent !important;
+}
+    
+</style>
