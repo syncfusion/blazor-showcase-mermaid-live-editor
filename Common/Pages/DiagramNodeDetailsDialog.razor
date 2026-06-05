@@ -1,0 +1,299 @@
+﻿@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Buttons
+@using MermaidLiveEditor.Shared
+@inject ThemeService ThemeService
+@inject IJSRuntime JS
+
+@namespace MermaidLiveEditor
+
+<SfDialog Width="400px"
+    Header="Node Details"
+    ShowCloseIcon="true" 
+    IsModal="true" 
+    @bind-Visible="isVisible">
+    <DialogEvents OnOverlayModalClick="() => Hide()"></DialogEvents>
+    <DialogTemplates>
+        <Content>
+            <div>
+                <!-- Node Content Section -->
+                <div style="margin-bottom: 15px;">
+                    <label style="font-weight:500; font-size:14px; display:block; margin-bottom:5px;">Content</label>
+                    <div style="
+                        background-color: @(ThemeService.CurrentThemeSettings.PopupContentBGColor);
+                        border-radius:5px;
+                        position:relative;
+                        font-size:14px;">
+                        <!-- Scrollable content -->
+                        <div style="padding:10px; overflow-x:auto; white-space:pre; font-family:Consolas">
+                            @FormatNodeDataInPopup(nodeContent)
+                        </div>
+
+                        <!-- Copy button stays fixed -->
+                        <button @onclick="() => CopyNodeData(nodeContent)" style="
+                            position:absolute;
+                            top:5px;
+                            right:5px;
+                            background:transparent;
+                            border:none;
+                            cursor:pointer;">
+                            <span class="e-icons @(isNodeContentCopied ? "e-check" : "e-copy")" style="color:#6C757D"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- JSON Path Section -->
+                <div>
+                    <label style="font-weight:500; font-size:14px; display:block; margin-bottom:5px;">JSON Path</label>
+                    <div style="
+                        background-color: @(ThemeService.CurrentThemeSettings.PopupContentBGColor);
+                        border-radius:5px;
+                        position:relative;
+                        font-size:14px;">
+                        <!-- Scrollable content -->
+                        <div style="padding:10px; overflow-x:auto; white-space:pre; font-family:Consolas">
+                            @FormatNodeDataInPopup(nodePath, true)
+                        </div>
+
+                        <!-- Copy button stays fixed -->
+                        <button @onclick="() => CopyNodeData(nodePath, true)" style="
+                            position:absolute;
+                            top:5px;
+                            right:5px;
+                            background:transparent;
+                            border:none;
+                            cursor:pointer;">
+                            <span class="e-icons @(isNodePathCopied ? "e-check" : "e-copy")" style="color:#6C757D"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code {
+    // Internal state management - no external parameters needed
+    private bool isVisible = false;
+    private string nodeContent = string.Empty;
+    private string nodePath = string.Empty;
+    
+    private bool isNodeContentCopied = false;
+    private bool isNodePathCopied = false;
+
+    public void Show(string content, string path)
+    {
+        nodeContent = content ?? string.Empty;
+        nodePath = path ?? string.Empty;
+        isVisible = true;
+        
+        // Reset copy states when showing dialog
+        isNodeContentCopied = false;
+        isNodePathCopied = false;
+        
+        StateHasChanged();
+    }
+
+    public void Hide()
+    {
+        isVisible = false;
+        StateHasChanged();
+    }
+
+    private RenderFragment FormatNodeDataInPopup(string content, bool isPath = false) => __builder =>
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return;
+
+        var formattedLines = FormatJsonLines(content);
+        int seq = 0;
+
+        // If not a json data
+        if (formattedLines.Count == 0)
+        {
+            __builder.OpenElement(seq++, "div");
+            if (isPath)
+            {
+                __builder.AddContent(seq++, AddCurlyBracesAroundRoot(content));
+            }
+            else
+            {
+                __builder.AddAttribute(seq++, "style", $"color:{ThemeService.CurrentThemeSettings.PopupValueColor};");
+                __builder.AddContent(seq++, '"' + content + '"');
+            }
+            __builder.CloseElement();
+        }
+        // If a json data
+        else if (formattedLines.Count > 0)
+        {
+            __builder.OpenElement(seq++, "div");
+            __builder.AddContent(seq++, "{");
+            __builder.CloseElement();
+
+            foreach (var (key, value, hasComma) in formattedLines)
+            {
+                __builder.OpenElement(seq++, "div");
+
+                __builder.OpenElement(seq++, "span");
+                __builder.AddAttribute(seq++, "style", $"color:{ThemeService.CurrentThemeSettings.PopupKeyColor}; font-weight:550; margin-right:5px; margin-left:14px;");
+                __builder.AddContent(seq++, key);
+                __builder.CloseElement();
+
+                __builder.OpenElement(seq++, "span");
+                __builder.AddAttribute(seq++, "style", "margin-right:5px;");
+                __builder.AddContent(seq++, ":");
+                __builder.CloseElement();
+
+                __builder.OpenElement(seq++, "span");
+                __builder.AddAttribute(seq++, "style", $"color:{ThemeService.CurrentThemeSettings.PopupValueColor};");
+                __builder.AddContent(seq++, value);
+                __builder.CloseElement();
+
+                if (hasComma)
+                {
+                    __builder.AddContent(seq++, ",");
+                }
+
+                __builder.CloseElement();
+            }
+
+            __builder.OpenElement(seq++, "div");
+            __builder.AddContent(seq++, "}");
+            __builder.CloseElement();
+        }
+    };
+
+    private static List<(string, string, bool)> FormatJsonLines(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return new List<(string, string, bool)>();
+
+        var lines = content.Split('\n');
+        var formattedLines = new List<(string, string, bool)>();
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            var parts = lines[i].Split(new char[] { ':' }, 2, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length == 2)
+            {
+                var key = $"\"{parts[0].Trim()}\"";
+                var value = parts[1].Trim();
+
+                bool isString = false;
+                bool boolResult;
+
+                if (bool.TryParse(value, out boolResult))
+                {
+                    value = boolResult.ToString().ToLower();
+                }
+                else
+                {
+                    // Check if the value is not an int or double, thereby treating it as a string
+                    isString = !int.TryParse(value, out _) && !double.TryParse(value, out _);
+
+                    if (isString)
+                    {
+                        value = $"{value}";
+                    }
+                }
+
+                bool isLast = i == lines.Length - 1;
+                formattedLines.Add((key, value, !isLast));
+            }
+        }
+        return formattedLines;
+    }
+
+    private string AddCurlyBracesAroundRoot(string input)
+    {
+        const string rootKeyword = "Root";
+        if (input.StartsWith(rootKeyword))
+        {
+            return "{" + rootKeyword + "}" + input.Substring(rootKeyword.Length);
+        }
+        return input;
+    }
+
+    private async Task CopyNodeData(string data, bool isPath = false)
+    {
+        if (isPath)
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", AddCurlyBracesAroundRoot(data));
+            isNodePathCopied = true;
+        }
+        else
+        {
+            var formattedString = GetFormattedJsonString(data);
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", formattedString);
+            isNodeContentCopied = true;
+        }
+
+        StateHasChanged();
+
+        await Task.Delay(1500);
+
+        if (isPath)
+            isNodePathCopied = false;
+        else
+            isNodeContentCopied = false;
+        
+        StateHasChanged();
+    }
+
+    private static string GetFormattedJsonString(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return string.Empty;
+
+        var formattedLines = FormatJsonLines(content);
+        
+        // Handle single value case (no key-value pairs found)
+        if (formattedLines.Count == 0)
+        {
+            // Check if content has no newlines (single value scenario)
+            if (!content.Contains('\n'))
+            {
+                var trimmedContent = content.Trim();
+                
+                // Check if it's a number
+                if (int.TryParse(trimmedContent, out _) || double.TryParse(trimmedContent, out _))
+                {
+                    return trimmedContent;
+                }
+                
+                // Check if it's a boolean
+                if (bool.TryParse(trimmedContent, out bool boolResult))
+                {
+                    return boolResult.ToString().ToLower();
+                }
+                
+                // Check if it's null
+                if (string.Equals(trimmedContent, "null", StringComparison.OrdinalIgnoreCase))
+                {
+                    return "null";
+                }
+                
+                // Everything else is treated as a string - add quotes if not already present
+                if (!trimmedContent.StartsWith("\"") || !trimmedContent.EndsWith("\""))
+                {
+                    return $"\"{trimmedContent}\"";
+                }
+                return trimmedContent;
+            }
+            
+            // Multiple lines but no key-value pairs - use existing behavior
+            return $"\"{content}\"";
+        }
+        
+        // Handle key-value pairs (existing behavior - unchanged)
+        var result = "{\n";
+
+        foreach (var (key, value, hasComma) in formattedLines)
+        {
+            result += $"    {key}: {value}{(hasComma ? "," : "")}\n";
+        }
+
+        result += "}";
+        return result;
+    }
+}

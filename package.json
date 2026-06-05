@@ -1,0 +1,33 @@
+{
+	"name": "mermaid-live-editor",
+	"version": "1.0.0",
+	"description": "Blazor Showcase Samples - Mermaid Live Editor",
+	"author": "Syncfusion Inc.",
+	"license": "SEE LICENSE IN license",
+	"keywords": [
+		"MermaidLiveEditor",
+		"mermaid-live-editor",
+		"blazor-mermaid-live-editor",
+		"blazor-wasm-mermaid-live-editor"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/syncfusion/blazor-showcase-mermaid-live-editor.git" 
+	},
+    "scripts": {
+        "minify": "gulp minify-css && gulp minify-js"
+	},
+	"devDependencies": {
+        "gulp-clean-css": "^4.3.0",
+        "gulp-rename": "^2.0.0",
+        "gulp-uglify": "^3.0.2",
+		"json-beautify": "^1.0.1",
+		"elasticlunr": "0.9.5",
+		"glob": "^7.1.2",
+		"gulp": "^4.0.2",
+		"gulp-dotnet-cli": "^1.0.2",
+		"require-dir": "^0.3.2",
+		"shelljs": "^0.8.5",
+		"simple-git": "^3.16.0"
+	}
+}

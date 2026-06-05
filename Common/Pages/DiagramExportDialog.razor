@@ -1,0 +1,89 @@
+﻿@using Syncfusion.Blazor.Popups
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Buttons
+
+@namespace MermaidLiveEditor
+
+<SfDialog Width="300px"
+          Header="Export Options"
+          IsModal="true"
+          ShowCloseIcon="true"
+          Visible="@IsVisible"
+          VisibleChanged="OnVisibleChanged"
+          Close="HandleClose"
+          CloseOnEscape="true"
+          OverlayClick="HandleClose">
+
+    <div style="margin-top:-13px">
+        <p>File Name</p>
+        <SfTextBox Placeholder="Enter file name"
+                   @bind-Value="FileName" />
+    </div>
+
+    <div style="margin-top:15px">
+        <p>Format</p>
+        <div style="display:flex; gap:12px">
+            <SfRadioButton Label="PNG"
+                           Name="exportMode"
+                           Value="PNG"
+                           TChecked="string"
+                           @bind-Checked="SelectedFormat" />
+
+            <SfRadioButton Label="JPG"
+                           Name="exportMode"
+                           Value="JPEG"
+                           TChecked="string"
+                           @bind-Checked="SelectedFormat" />
+
+            <SfRadioButton Label="SVG"
+                           Name="exportMode"
+                           Value="SVG"
+                           TChecked="string"
+                           @bind-Checked="SelectedFormat" />
+        </div>
+    </div>
+
+    <DialogButtons>
+        <DialogButton Content="Export"
+                      IsPrimary="true"
+                      OnClick="HandleExport" />
+    </DialogButtons>
+</SfDialog>
+
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    [Parameter] public EventCallback<(string FileName, string Format)> OnExport { get; set; }
+
+    private string FileName { get; set; } = "Diagram";
+    private string SelectedFormat { get; set; } = "PNG";
+
+    private async Task HandleClose()
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task OnVisibleChanged(bool visible)
+    {
+        if (!visible)
+        {
+            await OnClose.InvokeAsync();
+        }
+    }
+
+    private async Task HandleExport()
+    {
+        var sanitized = string.IsNullOrWhiteSpace(FileName)
+            ? "diagram"
+            : System.Text.RegularExpressions.Regex.Replace(
+                FileName.Trim(),
+                @"[^a-zA-Z0-9_-]",
+                "_");
+
+        await OnExport.InvokeAsync((sanitized, SelectedFormat));
+        await OnClose.InvokeAsync();
+    }
+}

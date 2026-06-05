@@ -1,0 +1,10 @@
+/Common/bin
+/webapp/server/MermaidLiveEditor/bin
+/Common/obj
+/webapp/server/MermaidLiveEditor/obj
+/webapp/server/MermaidLiveEditor/.vs
+/webapp/wasm/.vs
+/webapp/wasm/MermaidLiveEditor.Client/bin
+/webapp/wasm/MermaidLiveEditor.Client/obj
+/webapp/wasm/MermaidLiveEditor/bin
+/webapp/wasm/MermaidLiveEditor/obj

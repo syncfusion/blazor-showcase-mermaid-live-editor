@@ -1,0 +1,234 @@
+@using BlazorServerCommon_NET8.Shared
+@using Syncfusion.Blazor.Navigations
+@using Syncfusion.Blazor.SplitButtons
+@using MermaidLiveEditor.Shared
+@using static BlazorServerCommon_NET8.Shared.SampleMermaid
+@inject ThemeService ThemeService
+
+@namespace MermaidLiveEditor
+
+<style>
+    /* ─────────────────────────────────────────────────────────────────────────────
+       Navbar
+    ───────────────────────────────────────────────────────────────────────────── */
+
+    .navbar-left {
+        display: flex;
+        align-items: center;
+    }
+
+    .nav-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        margin-right: 24px;
+        color: #333333;
+        white-space: nowrap;
+    }
+
+    .navbar button {
+        margin-right: 8px;
+        background-color: transparent;
+        min-width: 60px;
+        font-size: 0.875rem;
+        border: 0;
+        box-shadow: none !important;
+    }
+
+    .nav-logo {
+        width: 2rem;
+        margin-right: 0.25rem;
+    }
+
+    .navbar-right > span {
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .dark-theme .navbar .nav-title,
+    .dark-theme .navbar button {
+        color: #f0f0f0;
+    }
+
+        .dark-theme .navbar button:hover {
+            background-color: #3a3a3a !important;
+        }
+
+    .dark-theme .navbar {
+        background-color: #2c2c2c;
+        border-bottom-color: #444444;
+    }
+
+    .dark-theme .nav-logo {
+        filter: brightness(0) invert(1);
+    }
+
+    .promotion-text {
+        display: flex;
+        align-items: center;
+        font-size: 14px;
+        font-weight: 500;
+        margin-right: 1rem;
+        font-family: sans-serif;
+        color: #333;
+    }
+
+    .dark-theme .promotion-text {
+        color: #f0f0f0;
+    }
+
+    .promotion-text .promotion-link {
+        color: #0d6efd;
+        text-decoration: none;
+    }
+
+    .dark-theme .promotion-text .promotion-link {
+        color: #6eb6ff;
+    }
+
+    /* Mermaid logo styling for theme visibility */
+    .mermaid-logo {
+        filter: none;
+    }
+
+    .dark-theme .mermaid-logo {
+        filter: brightness(0) invert(1);
+    }
+
+    .e-btn:focus {
+        background: none;
+    }
+
+    .e-item {
+        height: 32px !important;
+    }
+</style>
+<div class="navbar-left">
+    <img src="Mermaid_Icon.svg" class="mermaid-logo" style="margin-right:7px;" />
+
+    <span class="nav-title">Mermaid Live Editor</span>
+
+    <!-- File -->
+    <SfDropDownButton Content="File" CssClass="e-menu-btn">
+        <DropDownMenuItems>
+            <DropDownMenuItem Text="New" Id="new" IconCss="e-icons e-reset" />
+            <DropDownMenuItem Text="Import (.mmd)" Id="import" IconCss="e-icons e-import" />
+            <DropDownMenuItem Text="Export Image" Id="export-image" IconCss="e-icons e-export" />
+        </DropDownMenuItems>
+        <DropDownButtonEvents ItemSelected="OnFileSelect" />
+    </SfDropDownButton>
+
+    <!-- View -->
+    <SfDropDownButton Content="View" CssClass="e-menu-btn">
+        <DropDownMenuItems>
+            <DropDownMenuItem Text="Show Grid" Id="toggle-grid" IconCss="@(ShowGrid ? "e-icons e-check" : string.Empty)" />
+            <DropDownMenuItem Text="Show Ruler" Id="toggle-ruler" IconCss="@(ShowRuler ? "e-icons e-check" : string.Empty)" />
+        </DropDownMenuItems>
+        <DropDownButtonEvents ItemSelected="OnViewSelect" />
+    </SfDropDownButton>
+
+    <!-- Theme -->
+    <SfDropDownButton Content="Theme" CssClass="e-menu-btn">
+        <DropDownMenuItems>
+            <DropDownMenuItem Text="Light" Id="light" IconCss="@(ThemeService.CurrentTheme == "light" ? "e-icons e-check" : string.Empty)" />
+            <DropDownMenuItem Text="Dark" Id="dark" IconCss="@(ThemeService.CurrentTheme == "dark" ? "e-icons e-check" : string.Empty)" />
+        </DropDownMenuItems>
+        <DropDownButtonEvents ItemSelected="OnThemeSelect" />
+    </SfDropDownButton>
+
+    <!-- Samples -->
+    <SfDropDownButton Content="@CurrentSampleLabel" CssClass="e-menu-btn">
+        <DropDownMenuItems>
+
+            <DropDownMenuItem Text="Flowchart"
+                              Id="@SampleKey.SampleFlowchart.ToString()"
+                              IconCss="@GetSampleIcon(SampleKey.SampleFlowchart)" />
+
+            <DropDownMenuItem Text="Sequence Diagram"
+                              Id="@SampleKey.SampleSequence.ToString()"
+                              IconCss="@GetSampleIcon(SampleKey.SampleSequence)" />
+
+            <DropDownMenuItem Text="Mindmap"
+                              Id="@SampleKey.SampleMindmap.ToString()"
+                              IconCss="@GetSampleIcon(SampleKey.SampleMindmap)" />
+
+        </DropDownMenuItems>
+        <DropDownButtonEvents ItemSelected="OnSampleSelect" />
+    </SfDropDownButton>
+</div>
+
+<div class="promotion-text">
+    <img src="syncfusion_logo.svg" class="mermaid-logo" style="margin-right:7px;" />
+    Powered by&nbsp;
+    <a href="https://www.syncfusion.com/blazor-components/blazor-diagram?tag=es-freetools-mermaid-live-editor-sample-ft"
+           target="_blank"
+           class="promotion-link">
+        Syncfusion Diagram Component
+    </a>
+</div>
+
+
+@code {
+    [Parameter] public EventCallback<string> OnFileAction { get; set; }
+    [Parameter] public EventCallback<SampleKey> OnSampleLoad { get; set; }
+    [Parameter] public EventCallback<string> OnViewOptionToggle { get; set; }
+    [Parameter] public EventCallback<string> OnThemeChange { get; set; }
+
+    [Parameter] public bool ShowGrid { get; set; }
+    [Parameter] public bool ShowRuler { get; set; }
+    [Parameter] public string CurrentLayout { get; set; } = "flowchart";
+    
+    [Parameter] public SampleKey CurrentSample { get; set; }
+    private SampleKey _currentSample;
+    private string CurrentSampleLabel =>
+        _currentSample switch
+        {
+            SampleKey.SampleMindmap => "Mindmap",
+            SampleKey.SampleSequence => "Sequence Diagram",
+            _ => "Flowchart"
+        };
+
+    private string GetSampleIcon(SampleKey key) =>
+        _currentSample == key ? "e-icons e-check" : string.Empty;
+
+    private async Task OnFileSelect(MenuEventArgs args)
+    {
+        if (!string.IsNullOrWhiteSpace(args.Item.Id))
+            await OnFileAction.InvokeAsync(args.Item.Id);
+    }
+
+    private async Task OnViewSelect(MenuEventArgs args)
+    {
+        if (!string.IsNullOrWhiteSpace(args.Item.Id))
+            await OnViewOptionToggle.InvokeAsync(args.Item.Id);
+    }
+
+    private async Task OnThemeSelect(MenuEventArgs args)
+    {
+        if (!string.IsNullOrWhiteSpace(args.Item.Id))
+            await OnThemeChange.InvokeAsync(args.Item.Id);
+    }
+    
+    protected override void OnParametersSet()
+    {
+        _currentSample = CurrentSample;
+    }
+
+
+    private async Task OnSampleSelect(MenuEventArgs args)
+    {
+        if (string.IsNullOrWhiteSpace(args.Item.Id))
+            return;
+
+        if (!Enum.TryParse<SampleKey>(
+                args.Item.Id,
+                ignoreCase: true,
+                out var sampleKey))
+            return;
+
+        _currentSample = sampleKey;
+
+        await OnSampleLoad.InvokeAsync(sampleKey);
+    }
+
+}

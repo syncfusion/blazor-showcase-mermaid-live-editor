@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11626.173 insiders
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MermaidLiveEditor.Client", "MermaidLiveEditor.Client\MermaidLiveEditor.Client.csproj", "{40AE7EDA-5353-2A74-D260-C56D3F48F578}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorWasmCommon_NET8", "..\..\Common\BlazorWasmCommon_NET8.csproj", "{7E0E1828-4035-FD15-1945-A2DCB47C1433}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MermaidLiveEditor", "MermaidLiveEditor\MermaidLiveEditor.csproj", "{AFD6CBA8-D088-182B-B70F-F855C9CC4C31}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{40AE7EDA-5353-2A74-D260-C56D3F48F578}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40AE7EDA-5353-2A74-D260-C56D3F48F578}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40AE7EDA-5353-2A74-D260-C56D3F48F578}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40AE7EDA-5353-2A74-D260-C56D3F48F578}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E0E1828-4035-FD15-1945-A2DCB47C1433}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E0E1828-4035-FD15-1945-A2DCB47C1433}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E0E1828-4035-FD15-1945-A2DCB47C1433}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E0E1828-4035-FD15-1945-A2DCB47C1433}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFD6CBA8-D088-182B-B70F-F855C9CC4C31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFD6CBA8-D088-182B-B70F-F855C9CC4C31}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFD6CBA8-D088-182B-B70F-F855C9CC4C31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFD6CBA8-D088-182B-B70F-F855C9CC4C31}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {793AACFC-E6F0-4267-B476-A070CEC34C3F}
+	EndGlobalSection
+EndGlobal
