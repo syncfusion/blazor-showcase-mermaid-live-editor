@@ -932,3 +932,16 @@
 <DiagramExportDialog IsVisible="@isExportDialogOpen"
                      OnClose="@(() => isExportDialogOpen = false)"
                      OnExport="HandleDiagramExportAsync" />
+
+@if (isDetailsModalOpen)
+{
+    <div class="details-modal-overlay" @onclick="CloseErrorDetails">
+        <div class="details-modal" @onclick:stopPropagation>
+            <div class="details-modal-header">
+                <span>Error Details</span>
+                <button class="details-modal-close" aria-label="Close" @onclick="CloseErrorDetails">✕</button>
+            </div>
+            <pre class="details-modal-body">@errorMessage</pre>
+        </div>
+    </div>
+}

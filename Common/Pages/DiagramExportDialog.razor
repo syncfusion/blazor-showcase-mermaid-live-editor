@@ -83,7 +83,19 @@
                 @"[^a-zA-Z0-9_-]",
                 "_");
 
-        await OnExport.InvokeAsync((sanitized, SelectedFormat));
         await OnClose.InvokeAsync();
+
+        // Schedule the export to run on the Blazor renderer sync context.
+        _ = InvokeAsync(async () =>
+        {
+            try
+            {
+                await OnExport.InvokeAsync((sanitized, SelectedFormat));
+            }
+            catch
+            {
+                // Swallow exceptions here; parent will set error state if needed.
+            }
+        });
     }
 }
