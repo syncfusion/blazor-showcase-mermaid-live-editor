@@ -86,7 +86,9 @@ public partial class DiagramMain
     // Debounce handling (Live Preview)
     // React constants: DEBOUNCE_DELAY
     // -----------------------------------------------------------------------------
-    private Timer? debounceTimer;
+    // Separate timers: one for validating editor content, one for debounced preview rendering
+    private Timer? contentDebounceTimer;
+    private Timer? previewDebounceTimer;
     private const int DEBOUNCE_DELAY_MS = 500;
     #endregion
 
@@ -168,10 +170,10 @@ public partial class DiagramMain
 
     private async Task OnEditorContentChange(ModelContentChangedEvent _)
     {
-        // Cancel any existing debounce
-        debounceTimer?.Dispose();
+        // Cancel any existing content debounce
+        contentDebounceTimer?.Dispose();
 
-        debounceTimer = new Timer(async __ =>
+        contentDebounceTimer = new Timer(async __ =>
         {
             await InvokeAsync(async () =>
             {
@@ -179,35 +181,39 @@ public partial class DiagramMain
 
                 var text = await monacoEditor.GetValue() ?? string.Empty;
 
-                // React: setMermaidText
+                // Update model with latest editor text
                 mermaidText = text;
 
                 // Update detected sample dropdown immediately based on content
                 var layoutInfoForEditor = GetLayoutInfo(mermaidText);
                 CurrentSample = MapTypeToSampleKey(layoutInfoForEditor.Type);
 
-                // Reset status (React behavior)
+                // Reset import/status messages
                 errorMessage = string.Empty;
                 importSummary = string.Empty;
-                isEditorContentValid = false;
 
-                // Empty editor handling
+                // Validate the current editor content so status reflects current text
+                var ok = await ValidateMermaidAsync(mermaidText);
+
+                // Empty editor handling (ValidateMermaidAsync already marks empty as valid)
                 if (string.IsNullOrWhiteSpace(text))
                 {
                     pendingRender = false;
-                    isEditorContentValid = true;
                 }
 
-                // Live preview logic
+                // Live preview logic: if live preview is enabled and validation succeeded,
+                // schedule a debounced render. If live preview is off, mark pending render.
                 if (livePreview)
                 {
                     pendingRender = false;
-                    // validation + render happens in debounce render pipeline
-                    TriggerLivePreviewDebounced();
+                    if (ok)
+                    {
+                        TriggerLivePreviewDebounced();
+                    }
                 }
                 else
                 {
-                    // Live preview OFF → mark pending render
+                    // Live preview OFF → mark pending render but still show validation status
                     pendingRender = true;
                 }
 
@@ -221,7 +227,8 @@ public partial class DiagramMain
     public void Dispose()
     {
         ThemeService.OnThemeChanged -= StateHasChanged;
-        debounceTimer?.Dispose();
+        contentDebounceTimer?.Dispose();
+        previewDebounceTimer?.Dispose();
     }
 
     #endregion
@@ -444,9 +451,10 @@ public partial class DiagramMain
         if (!livePreview)
             return;
 
-        debounceTimer?.Dispose();
+        // Schedule a debounced render. Validation is handled by the content debounce.
+        previewDebounceTimer?.Dispose();
 
-        debounceTimer = new Timer(async _ =>
+        previewDebounceTimer = new Timer(async _ =>
         {
             await InvokeAsync(async () =>
             {
@@ -457,10 +465,6 @@ public partial class DiagramMain
                     diagram.Clear();
                     return;
                 }
-
-                var ok = await ValidateMermaidAsync(mermaidText);
-                if (!ok)
-                    return;
 
                 await RenderFromMermaidAsync(mermaidText);
             });
@@ -726,7 +730,7 @@ public partial class DiagramMain
                 Shape = DecoratorShape.None
             };
         }
-        var strokeColor = ThemeService.CurrentThemeSettings.ConnectorStrokeColor;
+        var strokeColor = "#6B7280";
 
         // Ensure connector style and basic stroke
         connector.Style ??= new ShapeStyle();
@@ -750,42 +754,9 @@ public partial class DiagramMain
         {
             foreach (PathAnnotation annotation in connector.Annotations)
             {
-                annotation.Style.Color = ThemeService.CurrentThemeSettings.TextValueColor;
+                annotation.Style.Color = strokeColor;
             }
         }
-    }
-    private async Task RefreshConnectorStylesAsync()
-    {
-        if (diagram?.Connectors == null)
-            return;
-
-        diagram.BeginUpdate();
-
-        foreach (var connector in diagram.Connectors)
-        {
-            connector.Style ??= new ShapeStyle();
-
-            connector.Style.StrokeColor =
-                ThemeService.CurrentThemeSettings.ConnectorStrokeColor;
-
-            connector.Style.StrokeWidth = 1.5;
-
-            if (connector.SourceDecorator != null)
-            {
-                connector.SourceDecorator.Style.Fill = ThemeService.CurrentThemeSettings.ConnectorStrokeColor;
-                connector.SourceDecorator.Style.StrokeColor = ThemeService.CurrentThemeSettings.ConnectorStrokeColor;
-            }
-            if(connector.Annotations.Count > 0)
-            {
-
-                foreach (PathAnnotation annotation in connector.Annotations)
-                {
-                    annotation.Style.Color = ThemeService.CurrentThemeSettings.TextValueColor;
-                }
-            }
-        }
-
-        await diagram.EndUpdateAsync();
     }
     #endregion
 
@@ -977,12 +948,30 @@ public partial class DiagramMain
     {
         if (SampleMermaid.SAMPLES.TryGetValue(key, out var sample))
         {
-            pendingRender = false;
+            pendingRender = !livePreview;
             CurrentSample = key;
             mermaidText = SampleMermaid.SAMPLES[key];
 
-            await monacoEditor.SetValue(mermaidText);
-            await RenderFromMermaidAsync(mermaidText);
+            if (monacoEditor != null)
+            {
+                await monacoEditor.SetValue(mermaidText);
+            }
+
+            // Validate the sample and update detected type so the UI reflects it
+            var layoutInfo = GetLayoutInfo(mermaidText);
+            var ok = await ValidateMermaidAsync(mermaidText);
+
+            if (ok)
+            {
+                detectedType = layoutInfo.Type;
+                isMindmapLayout = detectedType == "mindmap";
+            }
+
+            if (livePreview && ok)
+            {
+                await RenderFromMermaidAsync(mermaidText);
+            }
+
             StateHasChanged();
         }
     }
@@ -1036,7 +1025,6 @@ public partial class DiagramMain
                 Theme = theme == "dark" ? "vs-dark" : "vs"
             });
         }
-        await RefreshConnectorStylesAsync();
         StateHasChanged();
     }
 
